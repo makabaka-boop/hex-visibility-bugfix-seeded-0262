@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { clipOpenSegmentToPlanes, pointAt, type Point, type Segment } from '../src/geometry/clip'
 import { HEX_VERTEX_OFFSETS, cellKey, centerOf, hexPlanes, makeHexCell } from '../src/geometry/hex'
-import { analyzeVisibility, observerAtCell } from '../src/geometry/visibility'
+import { analyzeVisibility, compareFirstBlocker, observerAtCell, type FirstBlocker } from '../src/geometry/visibility'
 import { add, mul, normalize, rat, rationalToString, sub, type Rational } from '../src/geometry/rational'
 
 expect.addEqualityTesters([
@@ -182,6 +182,42 @@ describe('有理线段裁剪与独立实现对拍', () => {
     expect(rationalToString(target!.firstBlocker!.entryParameter)).toBe('1/3')
     expect(rationalToString(target!.firstBlocker!.entryPoint.x)).toBe('2')
     expect(rationalToString(target!.firstBlocker!.entryPoint.y)).toBe('-2')
+  })
+
+  it('极短内部穿越也算遮挡：不设最小长度阈值，交入参数保持精确有理数', () => {
+    // 线段在 t ∈ (2000/4001, 2001/4001) 穿过 (1,0) 内部，长度 1/4001 < 1/1000。
+    const line: Segment = {
+      start: { x: rat(3999n, 2000n), y: rat(6001n, 2000n) },
+      end: { x: rat(4n), y: rat(-2001n, 2000n) }
+    }
+    const actual = clipOpenSegmentToPlanes(line, hexPlanes(makeHexCell(1, 0)))
+    expectSameInterval(actual, referenceHexClip(line, 1, 0))
+    expect(rationalToString(actual!.enter)).toBe('2000/4001')
+    expect(rationalToString(actual!.leave)).toBe('2001/4001')
+  })
+
+  it('首挡并列裁决：先比较交入参数，再按 q、r 升序', () => {
+    const base: FirstBlocker = {
+      q: 0,
+      r: 0,
+      key: '0,0',
+      entryParameter: rat(1n, 2n),
+      entryPoint: point(1, 1)
+    }
+    const lowerQ: FirstBlocker = { ...base, q: 1, r: 3, key: '1,3' }
+    const higherQ: FirstBlocker = { ...base, q: 2, r: 0, key: '2,0' }
+    expect(compareFirstBlocker(lowerQ, higherQ)).toBe(-1)
+    expect(compareFirstBlocker(higherQ, lowerQ)).toBe(1)
+
+    const lowerR: FirstBlocker = { ...base, q: 1, r: 2, key: '1,2' }
+    const higherR: FirstBlocker = { ...base, q: 1, r: 5, key: '1,5' }
+    expect(compareFirstBlocker(lowerR, higherR)).toBe(-1)
+    expect(compareFirstBlocker(higherR, lowerR)).toBe(1)
+
+    const earlier: FirstBlocker = { ...base, q: 9, r: 9, entryParameter: rat(1n, 3n) }
+    const later: FirstBlocker = { ...base, q: -9, r: -9, entryParameter: rat(2n, 3n) }
+    expect(compareFirstBlocker(earlier, later)).toBe(-1)
+    expect(compareFirstBlocker(later, earlier)).toBe(1)
   })
 
   it('整数平面整体缩放后，参数化交入位置与可见性保持不变', () => {

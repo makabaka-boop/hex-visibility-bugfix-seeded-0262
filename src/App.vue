@@ -9,7 +9,7 @@ import {
   observerAtCell
 } from './geometry/visibility'
 import { cellKey } from './geometry/hex'
-import { parseRational, rat, type Rational } from './geometry/rational'
+import { parseRational, rat, rationalToString, type Rational } from './geometry/rational'
 
 type EditMode = 'blocks' | 'observer' | 'target'
 
@@ -24,12 +24,16 @@ const observerError = ref('')
 
 const observerPoint = ref(observerAtCell(0, 0).point)
 
+const observerLabel = computed(
+  () => `(${rationalToString(observerPoint.value.x)}, ${rationalToString(observerPoint.value.y)})`
+)
+
 const analysis = computed(() =>
   analyzeVisibility({
     radius: radius.value,
     observer: {
       point: observerPoint.value,
-      label: `(${observerXText.value}, ${observerYText.value})`
+      label: observerLabel.value
     },
     blockedKeys: blockedKeys.value
   })
@@ -89,7 +93,11 @@ function onCellClick(key: string): void {
   if (editMode.value === 'observer') {
     const cell = analysis.value.byKey.get(key)
     if (!cell) return
-    setObserverToPoint(cell.cell.center, String(cell.cell.q), String(cell.cell.r))
+    setObserverToPoint(
+      cell.cell.center,
+      rationalToString(cell.cell.center.x),
+      rationalToString(cell.cell.center.y)
+    )
     return
   }
 

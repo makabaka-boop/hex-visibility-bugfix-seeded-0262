@@ -45,8 +45,9 @@ export function clipOpenSegmentToPlanes(segment: Segment, planes: Plane[]): Segm
     const slope = add(mul(plane.a, dx), mul(plane.b, dy))
 
     if (slope[0] === 0n) {
-      // Strict interior requires constant < 0 for the entire segment.
-      if (compare(constant, [0n, 1n]) > 0) return null
+      // Strict interior requires constant < 0 for the entire segment; a line
+      // running along the boundary itself (constant === 0) never enters it.
+      if (compare(constant, [0n, 1n]) >= 0) return null
       continue
     }
 
@@ -54,19 +55,18 @@ export function clipOpenSegmentToPlanes(segment: Segment, planes: Plane[]): Segm
 
     if (slope[0] > 0n) {
       // constant + slope*t < 0  =>  t < boundary
-      if (compare(boundary, low) < 0) return null
+      if (compare(boundary, low) <= 0) return null
       if (compare(boundary, high) < 0) high = boundary
     } else {
       // constant + slope*t < 0  =>  t > boundary
-      if (compare(boundary, high) > 0) return null
+      if (compare(boundary, high) >= 0) return null
       if (compare(boundary, low) > 0) low = boundary
     }
-
-    if (compare(low, high) > 0) return null
   }
 
-  if (compare(sub(high, low), [1n, 1000n]) < 0) return null
-  return compare(low, high) <= 0 ? { enter: low, leave: high } : null
+  // Only a positive-length stay in the strict interior counts; zero-length
+  // contact (a touched corner or a shared endpoint) is not occlusion.
+  return compare(low, high) < 0 ? { enter: low, leave: high } : null
 }
 
 function divRat(a: Rational, b: Rational): Rational {

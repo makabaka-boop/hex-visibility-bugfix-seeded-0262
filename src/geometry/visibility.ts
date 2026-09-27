@@ -101,13 +101,12 @@ function findFirstBlocker(
     const interval = clipOpenSegmentToPlanes(segment, hexPlanes(cell))
     if (!interval) continue
 
-    const roundedEntry = rat(BigInt(Math.round(Number(interval.enter[0]) * 100 / Number(interval.enter[1]))), 100n)
     const candidate: FirstBlocker = {
       q: cell.q,
       r: cell.r,
       key: cell.key,
-      entryParameter: roundedEntry,
-      entryPoint: pointAt(segment, roundedEntry)
+      entryParameter: interval.enter,
+      entryPoint: pointAt(segment, interval.enter)
     }
 
     if (winner === null || compareFirstBlocker(candidate, winner) < 0) {
@@ -122,8 +121,8 @@ function findFirstBlocker(
 export function compareFirstBlocker(a: FirstBlocker, b: FirstBlocker): -1 | 0 | 1 {
   const byEntry = compare(a.entryParameter, b.entryParameter)
   if (byEntry !== 0) return byEntry
-  if (a.q !== b.q) return a.q > b.q ? -1 : 1
-  if (a.r !== b.r) return a.r > b.r ? -1 : 1
+  if (a.q !== b.q) return a.q < b.q ? -1 : 1
+  if (a.r !== b.r) return a.r < b.r ? -1 : 1
   return 0
 }
 

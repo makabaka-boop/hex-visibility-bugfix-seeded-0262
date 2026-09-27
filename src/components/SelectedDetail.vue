@@ -29,6 +29,10 @@ defineProps<{
       </dd>
     </dl>
 
+    <p v-else-if="target.blocked" class="note">
+      该格自身是阻挡格，不参与视线遮挡判定，因此没有首挡信息。
+    </p>
+
     <p v-else class="note">
       没有任何阻挡六边形与开线段有正长度内部相交；只擦边或擦顶点仍判为可见。
     </p>
